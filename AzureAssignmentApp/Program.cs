@@ -13,9 +13,10 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
+app.UseHttpsRedirection();
 app.UseSwagger();
 app.UseSwaggerUI();
 
 app.MapControllers();
-
+app.UseDeveloperExceptionPage();
 app.Run();
