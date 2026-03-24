@@ -19,7 +19,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-if (!string.IsNullOrEmpty(connectionString))
+if (!string.IsNullOrEmpty(connectionString) && !connectionString.Contains("(localdb)"))
 {
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(connectionString));
@@ -55,7 +55,7 @@ app.MapControllers();
 
 // ─── DB Migration on Startup ──────────────────────────────────────────────────
 
-if (!string.IsNullOrEmpty(connectionString))
+if (!string.IsNullOrEmpty(connectionString) && !connectionString.Contains("(localdb)"))
 {
     using (var scope = app.Services.CreateScope())
     {
