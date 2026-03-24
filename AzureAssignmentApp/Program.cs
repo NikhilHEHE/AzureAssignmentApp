@@ -17,9 +17,13 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
+if (!string.IsNullOrEmpty(connectionString))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(connectionString));
+}
 // CORS — open policy for development; restrict in production via env-specific config
 builder.Services.AddCors(options =>
 {
@@ -51,10 +55,12 @@ app.MapControllers();
 
 // ─── DB Migration on Startup ──────────────────────────────────────────────────
 
-using (var scope = app.Services.CreateScope())
+if (!string.IsNullOrEmpty(connectionString))
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.Migrate();
+    }
 }
-
 app.Run();
