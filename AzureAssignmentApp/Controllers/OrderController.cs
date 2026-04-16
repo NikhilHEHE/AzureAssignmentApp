@@ -1,8 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using Azure.Storage.Queues;
 using AzureAssignmentApp.Data;
 using AzureAssignmentApp.DTOs;
 using AzureAssignmentApp.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace AzureAssignmentApp.Controllers;
 
@@ -12,10 +14,12 @@ namespace AzureAssignmentApp.Controllers;
 public class OrderController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly IConfiguration _configuration;
 
-    public OrderController(AppDbContext context)
+    public OrderController(AppDbContext context, IConfiguration configuration)
     {
         _context = context;
+        _configuration = configuration;
     }
 
     /// <summary>Gets all orders with their items.</summary>
@@ -109,6 +113,26 @@ public class OrderController : ControllerBase
 
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
+
+        // Send message to queue
+        // Hardcoding connection string and queue name for simplicity
+        var connectionString = _configuration["StorageConnectionString"];
+        var queueName = "order-queue";
+
+        try
+        {
+            var queueClient = new QueueClient(connectionString, queueName);
+            await queueClient.CreateIfNotExistsAsync();
+
+            var message = $"OrderId:{order.Id}";
+            var encodedMessage = Convert.ToBase64String(Encoding.UTF8.GetBytes(message));
+
+            await queueClient.SendMessageAsync(encodedMessage);
+        }
+        catch (Exception ex)
+        {
+            // Log but don't fail the request
+        }
 
         // Reload with product names for response
         await _context.Entry(order)

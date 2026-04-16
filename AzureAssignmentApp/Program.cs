@@ -1,5 +1,7 @@
 using AzureAssignmentApp.Data;
 using Microsoft.EntityFrameworkCore;
+using Azure.Identity;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,13 +19,16 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var keyVaultUrl = new Uri("https://kv-assignment-ecom.vault.azure.net/");
+builder.Configuration.AddAzureKeyVault(keyVaultUrl, new DefaultAzureCredential());
 
-if (!string.IsNullOrEmpty(connectionString) && !connectionString.Contains("(localdb)"))
-{
-    builder.Services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(connectionString));
-}
+var connectionString = builder.Configuration["DbConnectionString"];
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions =>
+        sqlOptions.EnableRetryOnFailure()
+    ));
+
 // CORS — open policy for development; restrict in production via env-specific config
 builder.Services.AddCors(options =>
 {
